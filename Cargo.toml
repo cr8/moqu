@@ -1,0 +1,19 @@
+[package]
+name = "moqu"
+version = "0.1.0"
+authors = ["Aaron Miller <apage43@ninjawhale.com>"]
+
+[dependencies]
+bincode = "0.6.0"
+serde = "0.8.*"
+serde_json = "*"
+serde_derive = "*"
+tokio-core = "0.1"
+ring = "0.6.1"
+futures = "0.1.6"
+clap = "2.19.3"
+env_logger = "0.3.5"
+log = "0.3.*"
+# for base64/hex
+rustc-serialize = "0.3"
+

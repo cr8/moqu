@@ -19,6 +19,8 @@ use clap::{Arg, App, SubCommand};
 use types::MoquItem;
 
 fn main() {
+    drop(env_logger::init());
+
     let matches = App::new("moqu")
         .version("0.0.1")
         .about("Personal mobile message queue")
@@ -33,6 +35,9 @@ fn main() {
             .help("server to connect to")
             .takes_value(true)
             .default_value("localhost"))
+        .arg(Arg::with_name("ipv6")
+            .short("6")
+            .help("use ipv6 listening addrs"))
         .subcommand(SubCommand::with_name("server").about("Run moqu server"))
         .subcommand(SubCommand::with_name("client").about("Run moqu client"))
         .subcommand(SubCommand::with_name("publish")
@@ -60,15 +65,17 @@ fn main() {
         }
     };
 
+    let ipv6: bool = matches.occurrences_of("ipv6") > 0;
+
     match matches.subcommand_name() {
         Some("server") => {
-            match server::serve(port) {
+            match server::serve(port, ipv6) {
                 Ok(_) => info!("Exited normally!"),
                 Err(err) => println!("Got some error: {:?}", err),
             }
         }
         Some("client") => {
-            match client::client(host, port) {
+            match client::client(host, port, ipv6) {
                 Ok(_) => info!("exited normally"),
                 Err(err) => println!("Got some error: {:?}", err),
             }
@@ -79,7 +86,7 @@ fn main() {
                 kind: String::from(subargs.value_of("kind").unwrap()),
                 content: String::from(subargs.value_of("message").unwrap()),
             };
-            match client::publish(host, port, message) {
+            match client::publish(host, port, ipv6, message) {
                 Ok(_) => info!("exited normally"),
                 Err(err) => println!("Got some error: {:?}", err),
             }

@@ -93,7 +93,7 @@ impl MoquQueue {
     }
 }
 
-pub fn serve(port: u16) -> Result<(), Box<error::Error>> {
+pub fn serve(port: u16, ipv6: bool) -> Result<(), Box<error::Error>> {
     let mut queue = MoquQueue::new();
     let mut core = Core::new()?;
     let handle = core.handle();
@@ -102,7 +102,8 @@ pub fn serve(port: u16) -> Result<(), Box<error::Error>> {
         Err(_) => Key::new()?,
     };
     println!("Key: MOQU_KEY={}", key.bytes.to_hex());
-    let consock = net::UdpSocket::bind(("0.0.0.0", port))?;
+    let conaddr = if ipv6 { "::" } else { "0.0.0.0" };
+    let consock = net::UdpSocket::bind((conaddr, port))?;
     let tsock = UdpSocket::from_socket(consock, &handle)?;
     println!("Listening on port {}", port);
     let framed = tsock.framed(ServerCodec { key: key });

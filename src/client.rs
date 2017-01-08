@@ -64,7 +64,7 @@ pub fn handle_item(item: &MoquItem) -> Result<(), Box<error::Error>> {
     Ok(())
 }
 
-pub fn client(server: &str, sport: u16) -> Result<(), Box<error::Error>> {
+pub fn client(server: &str, sport: u16, ipv6: bool) -> Result<(), Box<error::Error>> {
     let mut cliseq: u64 = 0;
     // have seen the first seq (for reconnecting.)
     let mut ready: bool = false;
@@ -74,11 +74,13 @@ pub fn client(server: &str, sport: u16) -> Result<(), Box<error::Error>> {
     let handle = core.handle();
     let key = Key::from_bytes(&keybytes);
     println!("Client Key: MOQU_KEY={}", key.bytes.to_hex());
-    let consock = net::UdpSocket::bind(("0.0.0.0", 0))?;
+    let conaddr = if ipv6 { "::" } else { "0.0.0.0" };
+    let consock = net::UdpSocket::bind((conaddr, 0))?;
     let bound_addr = consock.local_addr()?;
     let serveraddr = net::ToSocketAddrs::to_socket_addrs(&(server, sport))?
         .next()
         .ok_or("Couldn't construct server socket addr")?;
+    println!("Server: {:?}", serveraddr);
     let tsock = UdpSocket::from_socket(consock, &handle)?;
     println!("Client addr: {:?}", bound_addr);
     let framed = tsock.framed(ClientCodec { key: key });
@@ -140,14 +142,17 @@ pub fn client(server: &str, sport: u16) -> Result<(), Box<error::Error>> {
 
 pub fn publish(server: &str,
                sport: u16,
+               ipv6: bool,
                item: MoquItem)
                -> Result<(), Box<error::Error>> {
     let keybytes: Vec<u8> = env::var("MOQU_KEY").unwrap().from_hex().unwrap();
     let key = Key::from_bytes(&keybytes);
-    let consock = net::UdpSocket::bind(("0.0.0.0", 0))?;
+    let conaddr = if ipv6 { "::" } else { "0.0.0.0" };
+    let consock = net::UdpSocket::bind((conaddr, 0))?;
     let serveraddr = net::ToSocketAddrs::to_socket_addrs(&(server, sport))?
         .next()
         .ok_or("Couldn't construct server socket addr")?;
+    println!("Server: {:?}", serveraddr);
     let mut codec = ClientCodec { key: key };
     let mut message = Vec::new();
     codec.encode((serveraddr, MoquClientReq::Publish(item)), &mut message);

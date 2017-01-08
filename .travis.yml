@@ -1,0 +1,99 @@
+dist: trusty
+language: rust
+services: docker
+sudo: required
+
+rust: nightly
+
+addons:
+  apt:
+    packages:
+      - g++
+      - gcc
+
+env:
+  global:
+    # Update this to match the name of your project.
+    - CRATE_NAME=moqu
+
+    # This is the channel that will be used to produce binary releases
+    - DEPLOY_VERSION=nightly
+
+    # default job
+    - TARGET=x86_64-unknown-linux-gnu CC_X=gcc-4.8 CXX_X=g++-4.8
+
+matrix:
+  include:
+    # Linux
+    # ring crypto lib seems to break w/ musl builds :/
+    # - env: TARGET=i686-unknown-linux-musl
+    - env: TARGET=i686-unknown-linux-gnu
+      addons:
+        apt:
+          packages:
+            - g++-multilib
+            - gcc-multilib
+            - libc6-dev-i386
+    - env: TARGET=x86_64-unknown-linux-gnu  # this is the default job
+    # - env: TARGET=x86_64-unknown-linux-musl
+
+    # OSX
+    # - env: TARGET=i686-apple-darwin
+    #   os: osx
+    - env: TARGET=x86_64-apple-darwin CC_X=clang CXX_X=clang++
+      os: osx
+
+    # Other architectures
+    # - env: TARGET=aarch64-unknown-linux-gnu
+    # - env: TARGET=armv7-unknown-linux-gnueabihf
+    # - env: TARGET=mips-unknown-linux-gnu
+    # - env: TARGET=mips64-unknown-linux-gnuabi64
+    # - env: TARGET=mips64el-unknown-linux-gnuabi64
+    # - env: TARGET=mipsel-unknown-linux-gnu
+    # - env: TARGET=powerpc-unknown-linux-gnu
+    # - env: TARGET=powerpc64-unknown-linux-gnu
+    # - env: TARGET=powerpc64le-unknown-linux-gnu
+    # - env: TARGET=s390x-unknown-linux-gnu DISABLE_TESTS=1
+
+    # # Testing other channels
+    # - env: TARGET=x86_64-unknown-linux-gnu
+    #   rust: nightly
+    # - env: TARGET=x86_64-apple-darwin
+    #   os: osx
+    #   rust: nightly
+
+install:
+  - sh ci/install.sh
+  - source ~/.cargo/env || true
+
+script:
+  - bash ci/script.sh
+
+before_deploy:
+  - sh ci/before_deploy.sh
+
+deploy:
+  api_key:
+    secure: PyLgxS95kBpQuKEE4bActAyXDDX3IcIs11ZYsGoruI/fB2XQAFYYyH8L+auSVAP6WEWj5amjyscRSDasSvfhrSgfRuIEV/CVfZtyAK9SSd0CIjFtdgBtSZrXA/suq0DcvFJ766AXm5+edkMsaOv54DOhFETblaQ6fcBek2UjY9UjZ4jrumMfbozKypZhRbemDCsQOUODEpHPmL7AZRfQF80oizgchbxtNsUawZIeV6yrIvzaHja7DtzhobRQrKZPjm3sr7avc2KO24vQ2GutNuvliw0Xmf6HjGDXoBCprBu/VMBYA9ngrrLOC/ovwgdoYxp91VKOrGBvCro+M6TmfeGnVVCPG3Z6hdFE2MgljVp5R4FWVKIey2rD5fNduOFWM6H3/jGANgSwndT/e1Bd49dFlUjH6+xfFZ099hIN3PWb0LsMamToV2TlXeWWkHLJX8RAS1OTbSRy9Kz+sHa90J/jwmg+rLvyFOXBur29wAC0ZQ397Wuc8c4DUsRpZiuhsVycQYpiMjEbs0V/B/RgiHD7YSoKs4UFSFQMLCvYyifwajZVX5cb7+G/KNWm9Uh8TqX6ZKKxIVjICBq4dQFNH/NGY7C+gslZWFEyuX5eHz5dcrVHQoWWQUe5IMfxQUNUXIKSANpZYvs4wSo2UY/N29r9Ynelm8iXt93gVO47/y4=
+  file_glob: true
+  file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
+  on:
+    condition: $TRAVIS_RUST_VERSION = $DEPLOY_VERSION
+    tags: true
+  provider: releases
+  skip_cleanup: true
+
+cache: cargo
+before_cache:
+  # Travis can't cache files that are not readable by "others"
+  - chmod -R a+r $HOME/.cargo
+
+branches:
+  only:
+    # release tags
+    - /^v\d+\.\d+\.\d+.*$/
+    - master
+
+notifications:
+  email:
+    on_success: never
